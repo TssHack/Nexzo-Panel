@@ -850,9 +850,6 @@ $totalServers = array_sum(array_column($data["licenses"], "server_limit"));
         </div>
     </footer>
 
-    <!-- QR Code Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
-
     <script>
         let currentQRLink = '';
 
@@ -912,30 +909,8 @@ $totalServers = array_sum(array_column($data["licenses"], "server_limit"));
                 modalContent.style.transform = 'scale(1)';
             }, 10);
             
-            // Generate QR code with better error handling
-            try {
-                QRCode.toCanvas(link, {
-                    width: 220,
-                    height: 220,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    margin: 3,
-                    errorCorrectionLevel: 'M'
-                }, function (error, canvas) {
-                    if (error) {
-                        console.error('QR Code generation error:', error);
-                        qrDiv.innerHTML = '<div class="text-red-400 p-4">❌ خطا در تولید QR کد</div>';
-                        showToast('❌ خطا در تولید QR کد', 'error');
-                    } else {
-                        qrDiv.appendChild(canvas);
-                        canvas.style.borderRadius = '12px';
-                        canvas.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-                    }
-                });
-            } catch (error) {
-                console.error('QR Code error:', error);
-                qrDiv.innerHTML = '<div class="text-red-400 p-4">❌ خطا در تولید QR کد</div>';
-            }
+            // Use alternative QR generation method
+            generateQRCode(link, qrDiv);
             
             linkDiv.textContent = link;
             
@@ -945,6 +920,55 @@ $totalServers = array_sum(array_column($data["licenses"], "server_limit"));
                     closeQR();
                 }
             };
+        }
+
+        // Alternative QR Code generation using online service
+        function generateQRCode(text, container) {
+            try {
+                // Create canvas element
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = 220;
+                canvas.height = 220;
+                canvas.style.borderRadius = '12px';
+                canvas.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+                
+                // Use QR Server API as fallback
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(text)}&bgcolor=ffffff&color=000000&margin=10`;
+                
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, 220, 220);
+                    container.appendChild(canvas);
+                };
+                
+                img.onerror = function() {
+                    // If API fails, create a simple text-based QR alternative
+                    createTextQR(text, container);
+                };
+                
+                img.src = qrApiUrl;
+                
+            } catch (error) {
+                console.error('QR generation error:', error);
+                createTextQR(text, container);
+            }
+        }
+
+        // Create text-based QR alternative
+        function createTextQR(text, container) {
+            const qrDiv = document.createElement('div');
+            qrDiv.className = 'bg-white p-6 rounded-2xl text-center';
+            qrDiv.innerHTML = `
+                <div class="text-6xl mb-4">📱</div>
+                <div class="text-gray-800 font-bold mb-2">QR Code</div>
+                <div class="text-xs text-gray-600 break-all font-mono bg-gray-100 p-3 rounded-lg">${text}</div>
+                <div class="mt-4 text-sm text-gray-600">لینک را کپی کنید و در برنامه اسکن کنید</div>
+            `;
+            container.appendChild(qrDiv);
         }
 
         // Copy QR Link
